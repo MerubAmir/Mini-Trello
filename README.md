@@ -7,11 +7,11 @@ A production-oriented full-stack Kanban app built after reverse-engineering Exca
 - Email/password authentication with signed HTTP-only session cookies.
 - Workspace and multi-board model.
 - Default Kanban columns: To Do, In Progress, Done.
-- Card CRUD with priority, description, drag-and-drop moves, and deletion.
+- Card CRUD with priority, description, move actions, and deletion.
 - Comments per card.
 - Activity feed per board.
 - Live UI updates across browser tabs with `BroadcastChannel` plus periodic board refresh.
-- Prisma relational schema: `User -> Workspace -> Board -> Column -> Card -> Comment/Activity`.
+- Prisma + MongoDB schema: `User -> Workspace -> Board -> Column -> Card -> Comment/Activity`.
 - Zod validation on API inputs.
 
 ## Tech Stack
@@ -19,15 +19,20 @@ A production-oriented full-stack Kanban app built after reverse-engineering Exca
 - Next.js App Router
 - React
 - Tailwind CSS
+- Next.js API Routes
 - Prisma ORM
-- PostgreSQL
+- MongoDB Atlas or local MongoDB
 - Zod
 - bcryptjs
 - jose JWT sessions
 
 ## Local Setup
 
-This machine currently has broken global `npm` and `yarn` shims, so the safest local commands use Corepack and local binaries directly.
+This project is in:
+
+```powershell
+D:\excalidraw\mini-trello
+```
 
 1. Install dependencies:
 
@@ -36,31 +41,29 @@ cd D:\excalidraw\mini-trello
 corepack yarn install
 ```
 
-2. Set environment variables in `.env`:
+2. Create a MongoDB database.
+
+Recommended: create a free MongoDB Atlas cluster, then copy the connection string. It should look like:
 
 ```env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
+DATABASE_URL="mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/minitrello?retryWrites=true&w=majority"
 AUTH_SECRET="replace-with-a-long-random-secret"
 ```
 
-For local PostgreSQL, the included `docker-compose.yml` expects:
+Put those values in `D:\excalidraw\mini-trello\.env`.
 
-```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/minitrello?schema=public"
-```
-
-3. Create database tables:
+3. Sync Prisma indexes/schema:
 
 ```powershell
 cd D:\excalidraw\mini-trello
-.\node_modules\.bin\prisma.cmd db push
+corepack yarn db:push
 ```
 
 4. Run the app:
 
 ```powershell
 cd D:\excalidraw\mini-trello
-.\node_modules\.bin\next.cmd dev -p 3005
+corepack yarn dev
 ```
 
 Open:
@@ -69,72 +72,110 @@ Open:
 http://localhost:3005
 ```
 
-## Local PostgreSQL Options
+## Optional Local MongoDB With Docker
 
-Option A: Docker, if installed:
+Docker is not installed on the current machine, but if you install Docker Desktop later:
 
 ```powershell
 cd D:\excalidraw\mini-trello
 docker compose up -d
-.\node_modules\.bin\prisma.cmd db push
-.\node_modules\.bin\next.cmd dev -p 3005
 ```
 
-Option B: Hosted Postgres, recommended for fastest deployment:
+Then use this in `.env`:
 
-- Create a database on Neon, Supabase, Railway, or Render.
-- Copy the pooled PostgreSQL connection string into `.env` as `DATABASE_URL`.
-- Run `prisma db push`.
+```env
+DATABASE_URL="mongodb://127.0.0.1:27017/minitrello"
+AUTH_SECRET="dev-secret-change-before-deploy"
+```
+
+Then run:
+
+```powershell
+corepack yarn db:push
+corepack yarn dev
+```
 
 ## Verification
 
-Production build was verified locally with:
+The MongoDB Prisma client generation and production build were verified locally:
 
 ```powershell
-.\node_modules\.bin\next.cmd build
+node .\node_modules\prisma\build\index.js generate
+node .\node_modules\next\dist\bin\next build
 ```
 
-## Deployment: Vercel + Hosted Postgres
+## GitHub Push
 
-1. Push this folder to GitHub.
-2. Create a hosted PostgreSQL database.
-3. Import the GitHub repo in Vercel.
-4. Add environment variables in Vercel:
-
-```env
-DATABASE_URL="your-hosted-postgres-url"
-AUTH_SECRET="a-long-random-production-secret"
-```
-
-5. Use these Vercel settings:
-
-```text
-Framework Preset: Next.js
-Build Command: yarn build
-Output Directory: .next
-Install Command: yarn install --frozen-lockfile
-```
-
-6. After deployment, run Prisma schema sync against the production database:
-
-```powershell
-DATABASE_URL="your-hosted-postgres-url" .\node_modules\.bin\prisma.cmd db push
-```
-
-On Vercel you can also run this locally before deployment if the hosted database is reachable.
-
-## GitHub Push Commands
-
-If you already created an empty GitHub repo, run:
+Create an empty GitHub repository first. Then run:
 
 ```powershell
 cd D:\excalidraw\mini-trello
-git init
-git add .
-git commit -m "Build Mini-Trello full-stack kanban app"
-git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
 git push -u origin main
+```
+
+If `origin` already exists:
+
+```powershell
+cd D:\excalidraw\mini-trello
+git remote set-url origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git push -u origin main
+```
+
+## Deploy To Vercel
+
+1. Push the project to GitHub.
+2. Go to Vercel and import the GitHub repo.
+3. Add environment variables:
+
+```env
+DATABASE_URL="your-mongodb-atlas-url"
+AUTH_SECRET="a-long-random-production-secret"
+```
+
+4. Use these settings:
+
+```text
+Framework Preset: Next.js
+Install Command: yarn install --frozen-lockfile
+Build Command: yarn build
+Output Directory: .next
+```
+
+5. Before or after deployment, run Prisma schema sync from your machine:
+
+```powershell
+cd D:\excalidraw\mini-trello
+$env:DATABASE_URL="your-mongodb-atlas-url"
+corepack yarn db:push
+```
+
+## Deploy To Render
+
+1. Push the project to GitHub.
+2. Create a new Render Web Service from the repo.
+3. Set environment variables:
+
+```env
+DATABASE_URL="your-mongodb-atlas-url"
+AUTH_SECRET="a-long-random-production-secret"
+NODE_ENV="production"
+```
+
+4. Use these settings:
+
+```text
+Runtime: Node
+Build Command: yarn install --frozen-lockfile && yarn build
+Start Command: yarn start
+```
+
+5. Run Prisma schema sync from your machine:
+
+```powershell
+cd D:\excalidraw\mini-trello
+$env:DATABASE_URL="your-mongodb-atlas-url"
+corepack yarn db:push
 ```
 
 ## Architecture Notes
@@ -146,13 +187,4 @@ Excalidraw separates live transport from durable persistence. This app follows t
 - `BroadcastChannel` tells other tabs to refresh when one tab changes data.
 - A periodic refresh catches missed tab messages, similar to Excalidraw's periodic full-scene sync.
 
-For true multi-user realtime beyond browser tabs, the next step is adding Socket.IO or Pusher/Ably and broadcasting card mutation events to board subscribers.
-
-## Known Environment Note
-
-Yarn warned that `next@14.2.23` has a security advisory. The build passes, but before final public deployment, upgrade Next.js to a patched release:
-
-```powershell
-corepack yarn add next@latest eslint-config-next@latest
-.\node_modules\.bin\next.cmd build
-```
+For true multi-user realtime beyond browser tabs, the next step is adding Socket.IO, Pusher, or Ably and broadcasting card mutation events to board subscribers.

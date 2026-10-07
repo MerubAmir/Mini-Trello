@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
@@ -14,7 +14,7 @@ enum CardPriority {
 }
 
 model User {
-  id           String        @id @default(cuid())
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
   name         String
   email        String        @unique
   passwordHash String
@@ -26,7 +26,7 @@ model User {
 }
 
 model Workspace {
-  id          String        @id @default(cuid())
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   memberships Membership[]
   boards      Board[]
@@ -35,10 +35,10 @@ model Workspace {
 }
 
 model Membership {
-  id          String    @id @default(cuid())
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
   role        String    @default("OWNER")
-  userId      String
-  workspaceId String
+  userId      String    @db.ObjectId
+  workspaceId String    @db.ObjectId
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
@@ -47,10 +47,10 @@ model Membership {
 }
 
 model Board {
-  id          String     @id @default(cuid())
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String     @default("")
-  workspaceId String
+  workspaceId String     @db.ObjectId
   workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   columns     Column[]
   activities  Activity[]
@@ -59,10 +59,10 @@ model Board {
 }
 
 model Column {
-  id        String   @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   title     String
   position  Int
-  boardId   String
+  boardId   String   @db.ObjectId
   board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
   cards     Card[]
   createdAt DateTime @default(now())
@@ -72,13 +72,13 @@ model Column {
 }
 
 model Card {
-  id          String       @id @default(cuid())
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   description String       @default("")
   priority    CardPriority @default(MEDIUM)
   position    Int
   dueDate     DateTime?
-  columnId    String
+  columnId    String       @db.ObjectId
   column      Column       @relation(fields: [columnId], references: [id], onDelete: Cascade)
   comments    Comment[]
   activities  Activity[]
@@ -87,22 +87,22 @@ model Card {
 }
 
 model Comment {
-  id        String   @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   body      String
-  cardId    String
-  authorId  String
+  cardId    String   @db.ObjectId
+  authorId  String   @db.ObjectId
   card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 }
 
 model Activity {
-  id        String   @id @default(cuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   action    String
   detail    String
-  boardId   String
-  cardId    String?
-  actorId   String
+  boardId   String   @db.ObjectId
+  cardId    String?  @db.ObjectId
+  actorId   String   @db.ObjectId
   board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
   card      Card?    @relation(fields: [cardId], references: [id], onDelete: SetNull)
   actor     User     @relation(fields: [actorId], references: [id], onDelete: Cascade)

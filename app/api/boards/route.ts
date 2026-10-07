@@ -28,21 +28,24 @@ export async function POST(request: NextRequest) {
     data: {
       workspaceId: body.workspaceId,
       name: parsed.data.name,
-      description: parsed.data.description,
-      columns: {
-        create: [
-          { title: "To Do", position: 0 },
-          { title: "In Progress", position: 1 },
-          { title: "Done", position: 2 }
-        ]
-      },
-      activities: {
-        create: {
-          actorId: userId,
-          action: "BOARD_CREATED",
-          detail: `created board "${parsed.data.name}"`
-        }
-      }
+      description: parsed.data.description
+    }
+  });
+
+  await prisma.column.createMany({
+    data: [
+      { boardId: board.id, title: "To Do", position: 0 },
+      { boardId: board.id, title: "In Progress", position: 1 },
+      { boardId: board.id, title: "Done", position: 2 }
+    ]
+  });
+
+  await prisma.activity.create({
+    data: {
+      boardId: board.id,
+      actorId: userId,
+      action: "BOARD_CREATED",
+      detail: `created board "${parsed.data.name}"`
     }
   });
 
