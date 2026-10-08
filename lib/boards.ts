@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/db";
 
+export const isMongoObjectId = (value: string) => /^[a-f\d]{24}$/i.test(value);
+
 export const getBoardForUser = async (boardId: string, userId: string) => {
+  if (!isMongoObjectId(boardId) || !isMongoObjectId(userId)) {
+    return null;
+  }
+
   return prisma.board.findFirst({
     where: {
       id: boardId,
@@ -14,6 +20,10 @@ export const getBoardForUser = async (boardId: string, userId: string) => {
 };
 
 export const getCardBoardForUser = async (cardId: string, userId: string) => {
+  if (!isMongoObjectId(cardId) || !isMongoObjectId(userId)) {
+    return null;
+  }
+
   return prisma.card.findFirst({
     where: {
       id: cardId,
@@ -38,6 +48,10 @@ export const getCardBoardForUser = async (cardId: string, userId: string) => {
 };
 
 export const serializeBoard = async (boardId: string) => {
+  if (!isMongoObjectId(boardId)) {
+    return null;
+  }
+
   return prisma.board.findUnique({
     where: { id: boardId },
     include: {
